@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SKS Bridge Inspection AI</title>
+    <title>SKS Bridge Inspection AI - Drone Video Support</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -16,32 +17,26 @@
             --accent-red: #ef4444;
             --accent-green: #22c55e;
             --accent-yellow: #eab308;
+            --accent-purple: #a855f7;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
             --border-color: #2a2a3a;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Outfit', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         .bg-grid {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background-image: 
                 linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
@@ -50,24 +45,13 @@
             z-index: 0;
         }
 
-        .bg-glow {
-            position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 70%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
         header {
-            position: relative;
-            z-index: 10;
-            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(10, 10, 15, 0.8);
+            background: rgba(10, 10, 15, 0.95);
             backdrop-filter: blur(20px);
         }
 
@@ -88,8 +72,7 @@
         }
 
         .logo-icon {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
             border-radius: 12px;
             display: flex;
@@ -99,7 +82,7 @@
         }
 
         .logo-text h1 {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
             -webkit-background-clip: text;
@@ -107,20 +90,50 @@
         }
 
         .logo-text span {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        .header-badge {
-            background: linear-gradient(135deg, var(--accent-green), #10b981);
-            padding: 0.5rem 1rem;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-secondary);
+            padding: 0.4rem;
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .tab-btn:hover { color: var(--text-primary); }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+        }
+
+        .tab-btn .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
         }
 
         main {
@@ -131,46 +144,100 @@
             padding: 2rem;
         }
 
-        .hero {
-            text-align: center;
-            padding: 2rem 0;
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .hero h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .hero p {
+        .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Form Inputs */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            font-size: 1rem;
-            max-width: 600px;
-            margin: 0 auto;
+            font-weight: 500;
         }
 
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Upload Zones */
         .upload-section {
-            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section { grid-template-columns: 1fr; }
         }
 
         .upload-zone {
             border: 2px dashed var(--border-color);
-            border-radius: 20px;
-            padding: 3rem 2rem;
+            border-radius: 16px;
+            padding: 2rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: var(--bg-card);
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s;
         }
 
         .upload-zone:hover {
             border-color: var(--accent-blue);
-            transform: translateY(-2px);
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .upload-zone.dragover {
@@ -178,224 +245,372 @@
             background: rgba(6, 182, 212, 0.1);
         }
 
-        .upload-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1.5rem;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+        .upload-zone.video-zone {
+            border-color: var(--accent-purple);
         }
 
-        .upload-zone h3 {
-            font-size: 1.5rem;
+        .upload-zone.video-zone:hover {
+            border-color: var(--accent-purple);
+            background: rgba(168, 85, 247, 0.05);
+        }
+
+        .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+        .upload-zone h4 {
             margin-bottom: 0.5rem;
+            font-size: 1rem;
         }
 
         .upload-zone p {
             color: var(--text-muted);
+            font-size: 0.85rem;
         }
 
-        .upload-zone input {
-            display: none;
+        /* Video Processing Section */
+        .video-processor {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
         }
 
-        .results-section {
-            display: none;
-            margin-top: 2rem;
-        }
-
-        .results-section.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .results-grid {
+        .video-preview-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
-        }
-
-        @media (max-width: 968px) {
-            .results-grid {
-                grid-template-columns: 1fr;
-            }
-            .hero h2 {
-                font-size: 1.5rem;
-            }
-        }
-
-        .result-card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1.25rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .result-card h3 {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .image-container {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: var(--bg-secondary);
-            min-height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .image-container img,
-        .image-container canvas {
-            max-width: 100%;
-            max-height: 400px;
-            object-fit: contain;
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .summary-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1.25rem;
-        }
-
-        .summary-header h3 {
-            font-size: 1.1rem;
-        }
-
-        .summary-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.75rem;
+            margin-bottom: 1.5rem;
         }
 
         @media (max-width: 768px) {
-            .summary-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .video-preview-container { grid-template-columns: 1fr; }
         }
 
-        .stat-box {
-            background: var(--bg-primary);
-            padding: 1.25rem;
+        .video-preview {
+            background: #000;
             border-radius: 12px;
-            text-align: center;
+            overflow: hidden;
         }
 
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .detections-list {
-            margin-top: 1rem;
+        .video-preview video {
+            width: 100%;
             max-height: 300px;
-            overflow-y: auto;
         }
 
-        .detection-item {
+        .video-controls {
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: 12px;
+        }
+
+        .video-info {
+            margin-bottom: 1rem;
+        }
+
+        .video-info-item {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 0.875rem;
-            background: var(--bg-secondary);
-            border-radius: 10px;
-            margin-bottom: 0.5rem;
-            border-left: 4px solid var(--accent-blue);
-        }
-
-        .detection-item.crack { border-left-color: var(--accent-red); }
-        .detection-item.corrosion { border-left-color: var(--accent-orange); }
-        .detection-item.spalling { border-left-color: var(--accent-yellow); }
-
-        .detection-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .detection-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-
-        .detection-icon.crack { background: rgba(239, 68, 68, 0.2); }
-        .detection-icon.corrosion { background: rgba(249, 115, 22, 0.2); }
-        .detection-icon.spalling { background: rgba(234, 179, 8, 0.2); }
-
-        .detection-name {
-            font-weight: 600;
-            text-transform: capitalize;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
             font-size: 0.9rem;
         }
 
-        .detection-location {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
+        .video-info-item:last-child { border-bottom: none; }
+
+        .video-info-label { color: var(--text-secondary); }
+        .video-info-value { font-weight: 600; color: var(--accent-cyan); }
+
+        /* Frame Extraction Settings */
+        .extraction-settings {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
-        .confidence-badge {
-            padding: 0.4rem 0.75rem;
-            border-radius: 100px;
-            font-size: 0.8rem;
+        .extraction-settings .form-group {
+            margin-bottom: 0;
+        }
+
+        .extraction-settings input, .extraction-settings select {
+            padding: 0.6rem;
+            font-size: 0.9rem;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 1.5rem 0;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 6px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Frame Grid */
+        .frame-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .frame-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            background: var(--bg-primary);
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .frame-item:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .frame-item.selected {
+            border-color: var(--accent-green);
+        }
+
+        .frame-item.has-defect {
+            border-color: var(--accent-red);
+        }
+
+        .frame-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .frame-item .frame-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.4rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            font-size: 0.7rem;
+        }
+
+        .frame-item .frame-time {
+            color: white;
+        }
+
+        .frame-item .defect-indicator {
+            position: absolute;
+            top: 0.3rem;
+            right: 0.3rem;
+            background: var(--accent-red);
+            color: white;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
             font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
         }
 
-        .confidence-high { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
-        .confidence-medium { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
-        .confidence-low { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .frame-item .checkbox {
+            position: absolute;
+            top: 0.3rem;
+            left: 0.3rem;
+            width: 20px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
 
+        .frame-item.selected .checkbox {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        /* Photo Grid */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .photo-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+
+        .photo-card-info {
+            padding: 1rem;
+        }
+
+        .photo-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .photo-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .defect-badge {
+            background: var(--accent-red);
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .photo-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .photo-meta div { margin-bottom: 0.2rem; }
+        .photo-meta strong { color: var(--text-primary); }
+
+        .photo-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .photo-card-actions button {
+            flex: 1;
+            padding: 0.4rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .btn-edit {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color) !important;
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            padding: 0.6rem;
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table input, .data-table select {
+            width: 100%;
+            padding: 0.35rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+        }
+
+        /* Rating Table */
+        .rating-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rating-table th, .rating-table td {
+            padding: 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .rating-input {
+            width: 50px;
+            padding: 0.4rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+        }
+
+        .rating-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .rating-good { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .rating-fair { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+        .rating-poor { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+        /* Buttons */
         .btn {
-            padding: 0.875rem 1.5rem;
+            padding: 0.7rem 1.25rem;
+            border: none;
             border-radius: 10px;
             font-family: 'Outfit', sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
@@ -408,495 +623,1309 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
 
-        .btn-secondary {
-            background: var(--bg-card);
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #10b981);
+            color: white;
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
             color: var(--text-primary);
-            border: 1px solid var(--border-color);
         }
 
-        .btn-secondary:hover {
-            background: var(--bg-secondary);
+        .btn-outline:hover {
             border-color: var(--accent-blue);
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.25rem;
-            flex-wrap: wrap;
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
         }
 
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Summary Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Rating Legend */
+        .rating-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.7rem;
+        }
+
+        .rating-legend span {
+            padding: 0.2rem 0.4rem;
+            background: var(--bg-card);
+            border-radius: 4px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 { font-size: 1rem; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            cursor: pointer;
+        }
+
+        .modal-body { padding: 1.25rem; }
+
+        .modal-preview {
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: var(--bg-secondary);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Loading */
         .loading-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 15, 0.9);
-            z-index: 100;
-            align-items: center;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10, 10, 15, 0.95);
+            z-index: 2000;
             justify-content: center;
+            align-items: center;
             flex-direction: column;
+            gap: 1rem;
         }
 
-        .loading-overlay.active {
-            display: flex;
-        }
+        .loading-overlay.active { display: flex; }
 
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--border-color);
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid var(--border-color);
             border-top-color: var(--accent-cyan);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-text {
-            margin-top: 1.25rem;
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-        }
-
-        .no-detection {
+        /* Empty State */
+        .empty-state {
             text-align: center;
             padding: 2rem;
             color: var(--text-muted);
         }
 
-        .no-detection-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-        }
+        .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
 
-        footer {
-            position: relative;
-            z-index: 10;
-            text-align: center;
-            padding: 1.5rem;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            border-top: 1px solid var(--border-color);
-            margin-top: 3rem;
+        /* Hidden canvas for frame extraction */
+        #extractionCanvas { display: none; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header { padding: 0.75rem 1rem; }
+            main { padding: 1rem; }
+            .tab-btn { padding: 0.4rem 0.5rem; font-size: 0.7rem; }
+            .form-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="bg-grid"></div>
-    <div class="bg-glow"></div>
 
     <header>
         <div class="header-content">
             <div class="logo">
-                <div class="logo-icon">🌉</div>
+                <div class="logo-icon">🚁</div>
                 <div class="logo-text">
-                    <h1>SKS Bridge Inspection</h1>
-                    <span>AI-Powered Analysis</span>
+                    <h1>SKS Bridge Inspection AI</h1>
+                    <span>Drone Video + SNBI Report</span>
                 </div>
             </div>
-            <div class="header-badge">✓ Ready</div>
+            <nav class="tab-nav">
+                <button class="tab-btn active" onclick="showTab('info')">📋 Info</button>
+                <button class="tab-btn" onclick="showTab('upload')">🎬 Upload</button>
+                <button class="tab-btn" onclick="showTab('frames')">🖼️ Frames <span class="badge" id="frameCount">0</span></button>
+                <button class="tab-btn" onclick="showTab('photos')">📸 Photos <span class="badge" id="photoCount">0</span></button>
+                <button class="tab-btn" onclick="showTab('defects')">⚠️ Defects <span class="badge" id="defectCount">0</span></button>
+                <button class="tab-btn" onclick="showTab('ratings')">⭐ Ratings</button>
+                <button class="tab-btn" onclick="showTab('report')">📄 Report</button>
+            </nav>
         </div>
     </header>
 
     <main>
-        <section class="hero">
-            <h2>AI-Powered Bridge Defect Detection</h2>
-            <p>Upload bridge images to automatically detect cracks, corrosion, and structural defects.</p>
-        </section>
-
-        <section class="upload-section">
-            <div class="upload-zone" id="uploadZone">
-                <div class="upload-icon">📷</div>
-                <h3>Drop your image here</h3>
-                <p>or click to browse • JPG, PNG, WEBP</p>
-                <input type="file" id="fileInput" accept="image/*">
+        <!-- Tab 1: Bridge Info -->
+        <div id="tab-info" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🌉</div>
+                    <h3>Bridge Information</h3>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Bridge Number</label>
+                        <input type="text" id="bridgeNumber" placeholder="e.g., 12345678901234A">
+                    </div>
+                    <div class="form-group">
+                        <label>Bridge Name</label>
+                        <input type="text" id="bridgeName" placeholder="e.g., Main Street Bridge">
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <select id="stateCode">
+                            <option value="48">Texas</option>
+                            <option value="06">California</option>
+                            <option value="12">Florida</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>County</label>
+                        <input type="text" id="countyCode" placeholder="e.g., Harris">
+                    </div>
+                    <div class="form-group">
+                        <label>Latitude</label>
+                        <input type="text" id="latitude" placeholder="29.760427">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude</label>
+                        <input type="text" id="longitude" placeholder="-95.369804">
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Spans</label>
+                        <input type="number" id="numSpans" value="3" min="1" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Inspection Date</label>
+                        <input type="date" id="inspectionDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Inspector Name</label>
+                        <input type="text" id="inspectorName" placeholder="John Smith, P.E.">
+                    </div>
+                </div>
             </div>
-        </section>
 
-        <section class="results-section" id="resultsSection">
-            <div class="results-grid">
-                <div class="result-card">
-                    <h3>📸 Original Image</h3>
-                    <div class="image-container">
-                        <img id="originalImage" src="" alt="Original">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="nextTab('upload')">Next: Upload Video/Photos →</button>
+            </div>
+        </div>
+
+        <!-- Tab 2: Upload -->
+        <div id="tab-upload" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎬</div>
+                    <h3>Upload Drone Video or Photos</h3>
+                </div>
+
+                <div class="upload-section">
+                    <!-- Video Upload -->
+                    <div class="upload-zone video-zone" id="videoUploadZone">
+                        <div class="upload-icon">🎥</div>
+                        <h4>Drone Video</h4>
+                        <p>MP4, MOV • Auto frame extraction</p>
+                        <input type="file" id="videoInput" accept="video/*" hidden>
+                    </div>
+
+                    <!-- Photo Upload -->
+                    <div class="upload-zone" id="photoUploadZone">
+                        <div class="upload-icon">📷</div>
+                        <h4>Photos</h4>
+                        <p>JPG, PNG • Multiple files</p>
+                        <input type="file" id="photoInput" accept="image/*" multiple hidden>
                     </div>
                 </div>
-                <div class="result-card">
-                    <h3>🔍 Detection Results</h3>
-                    <div class="image-container">
-                        <canvas id="resultCanvas"></canvas>
+
+                <!-- Video Processor -->
+                <div class="video-processor" id="videoProcessor" style="display: none;">
+                    <div class="video-preview-container">
+                        <div class="video-preview">
+                            <video id="videoPreview" controls></video>
+                        </div>
+                        <div class="video-controls">
+                            <div class="video-info">
+                                <div class="video-info-item">
+                                    <span class="video-info-label">File Name</span>
+                                    <span class="video-info-value" id="videoFileName">-</span>
+                                </div>
+                                <div class="video-info-item">
+                                    <span class="video-info-label">Duration</span>
+                                    <span class="video-info-value" id="videoDuration">-</span>
+                                </div>
+                                <div class="video-info-item">
+                                    <span class="video-info-label">Resolution</span>
+                                    <span class="video-info-value" id="videoResolution">-</span>
+                                </div>
+                                <div class="video-info-item">
+                                    <span class="video-info-label">Est. Frames</span>
+                                    <span class="video-info-value" id="estFrames">-</span>
+                                </div>
+                            </div>
+
+                            <div class="extraction-settings">
+                                <div class="form-group">
+                                    <label>Extract every</label>
+                                    <select id="extractInterval">
+                                        <option value="0.5">0.5 sec</option>
+                                        <option value="1" selected>1 sec</option>
+                                        <option value="2">2 sec</option>
+                                        <option value="3">3 sec</option>
+                                        <option value="5">5 sec</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="number" id="startTime" value="0" min="0" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="number" id="endTime" value="0" min="0" step="1">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-purple" onclick="extractFrames()" id="extractBtn">
+                                🎞️ Extract Frames
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progressBar"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progressStatus">Extracting frames...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="summary-card">
-                <div class="summary-header">
-                    <h3>📊 Inspection Summary</h3>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('info')">← Back</button>
+                <button class="btn btn-primary" onclick="nextTab('frames')" id="toFramesBtn" disabled>Next: Review Frames →</button>
+            </div>
+        </div>
+
+        <!-- Tab 3: Frames -->
+        <div id="tab-frames" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🖼️</div>
+                    <h3>Extracted Frames</h3>
                 </div>
-                <div class="summary-stats">
-                    <div class="stat-box">
-                        <div class="stat-value" id="totalDefects">0</div>
-                        <div class="stat-label">Total Defects</div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <button class="btn btn-sm btn-outline" onclick="selectAllFrames()">Select All</button>
+                        <button class="btn btn-sm btn-outline" onclick="selectDefectFrames()">Select Defects Only</button>
+                        <button class="btn btn-sm btn-outline" onclick="deselectAllFrames()">Deselect All</button>
                     </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="crackCount">0</div>
-                        <div class="stat-label">Cracks</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="corrosionCount">0</div>
-                        <div class="stat-label">Corrosion</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="otherCount">0</div>
-                        <div class="stat-label">Other</div>
+                    <div>
+                        <span id="selectedCount">0</span> selected
                     </div>
                 </div>
 
-                <div class="detections-list" id="detectionsList"></div>
+                <div class="frame-grid" id="frameGrid">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎬</div>
+                        <p>No frames extracted yet.<br>Upload a video to begin.</p>
+                    </div>
+                </div>
 
-                <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="generateReport()">
-                        📄 Generate Report
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="addSelectedToPhotos()" id="addToPhotosBtn" disabled>
+                        ✅ Add Selected to Photo Log
                     </button>
-                    <button class="btn btn-secondary" onclick="resetInspection()">
-                        🔄 New Inspection
+                    <button class="btn btn-primary" onclick="analyzeSelectedFrames()" id="analyzeBtn" disabled>
+                        🔍 Analyze Selected with AI
                     </button>
                 </div>
             </div>
-        </section>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('upload')">← Back</button>
+                <button class="btn btn-primary" onclick="nextTab('photos')">Next: Photo Log →</button>
+            </div>
+        </div>
+
+        <!-- Tab 4: Photos -->
+        <div id="tab-photos" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📸</div>
+                    <h3>Photo Log</h3>
+                </div>
+
+                <div class="photo-grid" id="photoGrid">
+                    <div class="empty-state" id="photoEmpty">
+                        <div class="empty-state-icon">📷</div>
+                        <p>No photos yet.<br>Add from extracted frames or upload directly.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('frames')">← Back</button>
+                <button class="btn btn-primary" onclick="nextTab('defects')">Next: Defect Log →</button>
+            </div>
+        </div>
+
+        <!-- Tab 5: Defects -->
+        <div id="tab-defects" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚠️</div>
+                    <h3>Defect Log</h3>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="defectTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Severity</th>
+                                <th>Width</th>
+                                <th>Length</th>
+                                <th>Photo</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="defectBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="empty-state" id="defectEmpty">
+                    <div class="empty-state-icon">✅</div>
+                    <p>No defects recorded yet.</p>
+                </div>
+
+                <button class="btn btn-sm btn-outline" style="margin-top: 1rem;" onclick="addDefectRow()">
+                    + Add Defect Manually
+                </button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('photos')">← Back</button>
+                <button class="btn btn-primary" onclick="nextTab('ratings')">Next: Ratings →</button>
+            </div>
+        </div>
+
+        <!-- Tab 6: Ratings -->
+        <div id="tab-ratings" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⭐</div>
+                    <h3>Component Condition Ratings</h3>
+                </div>
+
+                <div class="rating-legend">
+                    <strong>Scale:</strong>
+                    <span>9=Excellent</span>
+                    <span>7=Good</span>
+                    <span>5=Fair</span>
+                    <span>3=Serious</span>
+                    <span>0=Failed</span>
+                    <span>N=N/A</span>
+                </div>
+
+                <table class="rating-table">
+                    <thead>
+                        <tr><th>Component</th><th>Rating</th><th>Condition</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Deck</td>
+                            <td><input type="text" class="rating-input" id="deckRating" maxlength="1" value="7"></td>
+                            <td><span class="rating-badge" id="deckBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Superstructure</td>
+                            <td><input type="text" class="rating-input" id="superRating" maxlength="1" value="7"></td>
+                            <td><span class="rating-badge" id="superBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Substructure</td>
+                            <td><input type="text" class="rating-input" id="subRating" maxlength="1" value="7"></td>
+                            <td><span class="rating-badge" id="subBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Culvert</td>
+                            <td><input type="text" class="rating-input" id="culvertRating" maxlength="1" value="N"></td>
+                            <td><span class="rating-badge" id="culvertBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Bearings</td>
+                            <td><input type="text" class="rating-input" id="bearingRating" maxlength="1" value="7"></td>
+                            <td><span class="rating-badge" id="bearingBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Joints</td>
+                            <td><input type="text" class="rating-input" id="jointRating" maxlength="1" value="6"></td>
+                            <td><span class="rating-badge" id="jointBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Channel</td>
+                            <td><input type="text" class="rating-input" id="channelRating" maxlength="1" value="7"></td>
+                            <td><span class="rating-badge" id="channelBadge">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Scour</td>
+                            <td><input type="text" class="rating-input" id="scourRating" maxlength="1" value="5"></td>
+                            <td><span class="rating-badge" id="scourBadge">-</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <strong>Overall:</strong>
+                    <span id="overallCondition" class="rating-badge" style="margin-left: 0.5rem;">-</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('defects')">← Back</button>
+                <button class="btn btn-primary" onclick="nextTab('report')">Next: Report →</button>
+            </div>
+        </div>
+
+        <!-- Tab 7: Report -->
+        <div id="tab-report" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📄</div>
+                    <h3>Generate SNBI Report</h3>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportBridgeId">-</div>
+                        <div class="summary-label">Bridge #</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportDate">-</div>
+                        <div class="summary-label">Date</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportFrames">0</div>
+                        <div class="summary-label">Frames</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportPhotos">0</div>
+                        <div class="summary-label">Photos</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportDefects">0</div>
+                        <div class="summary-label">Defects</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportCondition">-</div>
+                        <div class="summary-label">Condition</div>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="justify-content: center; margin-top: 2rem;">
+                    <button class="btn btn-success" onclick="generateExcel()">
+                        📥 Download SNBI Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="nextTab('ratings')">← Back</button>
+                <button class="btn btn-outline" onclick="resetAll()">🔄 New Inspection</button>
+            </div>
+        </div>
     </main>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Analyzing image with AI...</div>
+    <!-- Photo Info Modal -->
+    <div class="modal-overlay" id="photoModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>📍 Photo Info</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <img id="modalPreview" class="modal-preview" src="">
+                
+                <div class="form-group">
+                    <label>Location</label>
+                    <select id="modalLocation">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Element</label>
+                    <select id="modalElement">
+                        <option value="">-- Select --</option>
+                        <option>Deck</option>
+                        <option>Girder</option>
+                        <option>Column</option>
+                        <option>Abutment</option>
+                        <option>Pier Cap</option>
+                        <option>Bearing</option>
+                        <option>Joint</option>
+                        <option>Railing</option>
+                        <option>General</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="modalDescription" placeholder="Optional notes">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePhotoInfo()">Save</button>
+            </div>
+        </div>
     </div>
 
-    <footer>
-        <p>SKS Bridge Inspection AI • Powered by Roboflow • For Structural Engineers</p>
-    </footer>
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingText">Processing...</p>
+    </div>
+
+    <!-- Hidden Canvas -->
+    <canvas id="extractionCanvas"></canvas>
 
     <script>
-        // Roboflow API Configuration
-        const API_KEY = 'rf_uTnziOwBlAfvm5O4yl0tzFNbg632';
-        
-        // Global variables
-        let currentPredictions = [];
+        // API
+        const API_KEY = 'v91v4nywgLCh5vRWdCeU';
 
-        // DOM Elements
-        const uploadZone = document.getElementById('uploadZone');
-        const fileInput = document.getElementById('fileInput');
-        const resultsSection = document.getElementById('resultsSection');
-        const originalImage = document.getElementById('originalImage');
-        const resultCanvas = document.getElementById('resultCanvas');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const detectionsList = document.getElementById('detectionsList');
-
-        // Colors for defect types
-        const defectColors = {
-            'crack': '#ef4444',
-            'Crack': '#ef4444',
-            'corrosion': '#f97316',
-            'Corrosion': '#f97316',
-            'spalling': '#eab308',
-            'Spalling': '#eab308',
-            'leakage': '#3b82f6',
-            'Leakage': '#3b82f6',
-            'default': '#06b6d4'
+        // State
+        const state = {
+            frames: [],      // Extracted frames
+            photos: [],      // Photo log entries
+            defects: [],     // Defect entries
+            video: null,
+            editingPhotoIndex: null
         };
 
-        // Event Listeners
-        uploadZone.addEventListener('click', () => fileInput.click());
-        
-        uploadZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadZone.classList.add('dragover');
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('inspectionDate').valueAsDate = new Date();
+            initRatingListeners();
+            updateRatingBadges();
+            initUploadZones();
         });
 
-        uploadZone.addEventListener('dragleave', () => {
-            uploadZone.classList.remove('dragover');
-        });
-
-        uploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                processImage(file);
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                processImage(file);
-            }
-        });
-
-        // Process uploaded image
-        async function processImage(file) {
-            showLoading(true);
+        // Tab Navigation
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            event?.target?.closest('.tab-btn')?.classList.add('active');
             
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const base64Full = e.target.result;
-                originalImage.src = base64Full;
-                
-                // Get base64 data without prefix
-                const base64Data = base64Full.split(',')[1];
-                
-                try {
-                    const predictions = await detectWithRoboflow(base64Data);
-                    currentPredictions = predictions;
-                    
-                    // Wait for image to load then display results
-                    const img = new Image();
-                    img.onload = () => {
-                        displayResults(img, predictions);
-                        showLoading(false);
-                    };
-                    img.src = base64Full;
-                } catch (error) {
-                    console.error('Detection error:', error);
-                    showLoading(false);
-                    
-                    // Show results anyway with empty predictions
-                    const img = new Image();
-                    img.onload = () => {
-                        displayResults(img, []);
-                    };
-                    img.src = base64Full;
-                }
-            };
-            reader.readAsDataURL(file);
+            if (tabId === 'report') updateReportSummary();
+            if (tabId === 'defects') renderDefects();
         }
 
-        // Call Roboflow Hosted API
+        function nextTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.getAttribute('onclick')?.includes(`'${tabId}'`)) btn.classList.add('active');
+            });
+            if (tabId === 'report') updateReportSummary();
+            if (tabId === 'defects') renderDefects();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Upload Zones
+        function initUploadZones() {
+            const videoZone = document.getElementById('videoUploadZone');
+            const videoInput = document.getElementById('videoInput');
+            const photoZone = document.getElementById('photoUploadZone');
+            const photoInput = document.getElementById('photoInput');
+
+            videoZone.addEventListener('click', () => videoInput.click());
+            videoZone.addEventListener('dragover', e => { e.preventDefault(); videoZone.classList.add('dragover'); });
+            videoZone.addEventListener('dragleave', () => videoZone.classList.remove('dragover'));
+            videoZone.addEventListener('drop', e => {
+                e.preventDefault();
+                videoZone.classList.remove('dragover');
+                if (e.dataTransfer.files[0]?.type.startsWith('video/')) {
+                    handleVideoUpload(e.dataTransfer.files[0]);
+                }
+            });
+            videoInput.addEventListener('change', e => {
+                if (e.target.files[0]) handleVideoUpload(e.target.files[0]);
+            });
+
+            photoZone.addEventListener('click', () => photoInput.click());
+            photoZone.addEventListener('dragover', e => { e.preventDefault(); photoZone.classList.add('dragover'); });
+            photoZone.addEventListener('dragleave', () => photoZone.classList.remove('dragover'));
+            photoZone.addEventListener('drop', e => {
+                e.preventDefault();
+                photoZone.classList.remove('dragover');
+                handlePhotoUpload(e.dataTransfer.files);
+            });
+            photoInput.addEventListener('change', e => handlePhotoUpload(e.target.files));
+        }
+
+        // Video Upload
+        function handleVideoUpload(file) {
+            state.video = file;
+            const video = document.getElementById('videoPreview');
+            video.src = URL.createObjectURL(file);
+            
+            document.getElementById('videoFileName').textContent = file.name;
+            document.getElementById('videoProcessor').style.display = 'block';
+
+            video.onloadedmetadata = () => {
+                const duration = video.duration;
+                document.getElementById('videoDuration').textContent = formatTime(duration);
+                document.getElementById('videoResolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+                document.getElementById('endTime').value = Math.floor(duration);
+                
+                const interval = parseFloat(document.getElementById('extractInterval').value);
+                document.getElementById('estFrames').textContent = Math.floor(duration / interval);
+            };
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // Frame Extraction
+        async function extractFrames() {
+            const video = document.getElementById('videoPreview');
+            const canvas = document.getElementById('extractionCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const interval = parseFloat(document.getElementById('extractInterval').value);
+            const startTime = parseFloat(document.getElementById('startTime').value) || 0;
+            const endTime = parseFloat(document.getElementById('endTime').value) || video.duration;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            state.frames = [];
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('extractBtn').disabled = true;
+
+            const totalFrames = Math.floor((endTime - startTime) / interval);
+            let currentFrame = 0;
+
+            for (let time = startTime; time < endTime; time += interval) {
+                video.currentTime = time;
+                await new Promise(resolve => video.onseeked = resolve);
+                
+                ctx.drawImage(video, 0, 0);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                
+                state.frames.push({
+                    id: currentFrame + 1,
+                    time: time,
+                    data: dataUrl,
+                    selected: false,
+                    hasDefect: false,
+                    defectCount: 0,
+                    predictions: []
+                });
+
+                currentFrame++;
+                const percent = Math.round((currentFrame / totalFrames) * 100);
+                document.getElementById('progressBar').style.width = `${percent}%`;
+                document.getElementById('progressPercent').textContent = `${percent}%`;
+                document.getElementById('progressStatus').textContent = `Extracted ${currentFrame} of ${totalFrames} frames`;
+            }
+
+            document.getElementById('progressStatus').textContent = `✅ Extracted ${state.frames.length} frames`;
+            document.getElementById('extractBtn').disabled = false;
+            document.getElementById('toFramesBtn').disabled = false;
+            document.getElementById('frameCount').textContent = state.frames.length;
+            
+            renderFrameGrid();
+        }
+
+        function renderFrameGrid() {
+            const grid = document.getElementById('frameGrid');
+            
+            if (state.frames.length === 0) {
+                grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎬</div><p>No frames extracted yet.</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = state.frames.map((frame, idx) => `
+                <div class="frame-item ${frame.selected ? 'selected' : ''} ${frame.hasDefect ? 'has-defect' : ''}" 
+                     onclick="toggleFrame(${idx})">
+                    <img src="${frame.data}" alt="Frame ${frame.id}">
+                    <div class="checkbox">${frame.selected ? '✓' : ''}</div>
+                    ${frame.hasDefect ? `<div class="defect-indicator">${frame.defectCount} defect${frame.defectCount > 1 ? 's' : ''}</div>` : ''}
+                    <div class="frame-overlay">
+                        <span class="frame-time">${formatTime(frame.time)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            updateFrameButtons();
+        }
+
+        function toggleFrame(idx) {
+            state.frames[idx].selected = !state.frames[idx].selected;
+            renderFrameGrid();
+        }
+
+        function selectAllFrames() {
+            state.frames.forEach(f => f.selected = true);
+            renderFrameGrid();
+        }
+
+        function selectDefectFrames() {
+            state.frames.forEach(f => f.selected = f.hasDefect);
+            renderFrameGrid();
+        }
+
+        function deselectAllFrames() {
+            state.frames.forEach(f => f.selected = false);
+            renderFrameGrid();
+        }
+
+        function updateFrameButtons() {
+            const selectedCount = state.frames.filter(f => f.selected).length;
+            document.getElementById('selectedCount').textContent = selectedCount;
+            document.getElementById('addToPhotosBtn').disabled = selectedCount === 0;
+            document.getElementById('analyzeBtn').disabled = selectedCount === 0;
+        }
+
+        // AI Analysis
+        async function analyzeSelectedFrames() {
+            const selected = state.frames.filter(f => f.selected);
+            if (selected.length === 0) return;
+
+            showLoading(true, `Analyzing ${selected.length} frames...`);
+
+            for (let i = 0; i < selected.length; i++) {
+                const frame = selected[i];
+                document.getElementById('loadingText').textContent = `Analyzing frame ${i + 1} of ${selected.length}...`;
+                
+                try {
+                    const base64 = frame.data.split(',')[1];
+                    const predictions = await detectWithRoboflow(base64);
+                    frame.predictions = predictions;
+                    frame.hasDefect = predictions.length > 0;
+                    frame.defectCount = predictions.length;
+                } catch (err) {
+                    console.error('Analysis error:', err);
+                }
+            }
+
+            showLoading(false);
+            renderFrameGrid();
+            
+            const defectFrames = selected.filter(f => f.hasDefect).length;
+            alert(`Analysis complete!\n\n${defectFrames} frames with defects found out of ${selected.length} analyzed.`);
+        }
+
         async function detectWithRoboflow(base64Data) {
             const response = await fetch(
                 `https://detect.roboflow.com/crack-bridge-detection/1?api_key=${API_KEY}&confidence=5`,
                 {
                     method: 'POST',
                     body: base64Data,
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 }
             );
-
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`API error: ${response.status}`);
             const data = await response.json();
             return data.predictions || [];
         }
 
-        // Display detection results
-        function displayResults(img, predictions) {
-            resultsSection.classList.add('active');
-            
-            // Setup canvas
-            const ctx = resultCanvas.getContext('2d');
-            resultCanvas.width = img.width;
-            resultCanvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
+        // Add to Photos
+        function addSelectedToPhotos() {
+            const selected = state.frames.filter(f => f.selected);
+            if (selected.length === 0) return;
 
-            // Draw bounding boxes
-            predictions.forEach(pred => {
-                const color = defectColors[pred.class] || defectColors.default;
-                const confidence = pred.confidence;
-                
-                // Calculate box coordinates (Roboflow returns center x,y)
-                const x = pred.x - pred.width / 2;
-                const y = pred.y - pred.height / 2;
-                const width = pred.width;
-                const height = pred.height;
-
-                // Draw box
-                ctx.strokeStyle = color;
-                ctx.lineWidth = Math.max(3, img.width / 150);
-                ctx.strokeRect(x, y, width, height);
-
-                // Draw semi-transparent fill
-                ctx.fillStyle = color + '20';
-                ctx.fillRect(x, y, width, height);
-
-                // Draw label
-                const label = `${pred.class} ${Math.round(confidence * 100)}%`;
-                const fontSize = Math.max(14, img.width / 35);
-                ctx.font = `bold ${fontSize}px Outfit, sans-serif`;
-                const textWidth = ctx.measureText(label).width;
-                
-                // Label background
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y - fontSize - 10, textWidth + 12, fontSize + 10);
-
-                // Label text
-                ctx.fillStyle = 'white';
-                ctx.fillText(label, x + 6, y - 6);
-            });
-
-            updateStatistics(predictions);
-            updateDetectionsList(predictions);
-            
-            // Scroll to results
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
+            // Open modal for batch location assignment
+            updateLocationOptions();
+            document.getElementById('modalPreview').src = selected[0].data;
+            state.pendingFrames = selected;
+            document.getElementById('photoModal').classList.add('active');
         }
 
-        // Update statistics
-        function updateStatistics(predictions) {
-            const crackCount = predictions.filter(p => 
-                p.class.toLowerCase().includes('crack')).length;
-            const corrosionCount = predictions.filter(p => 
-                p.class.toLowerCase().includes('corrosion') || 
-                p.class.toLowerCase().includes('rust')).length;
-            const otherCount = predictions.length - crackCount - corrosionCount;
-
-            document.getElementById('totalDefects').textContent = predictions.length;
-            document.getElementById('crackCount').textContent = crackCount;
-            document.getElementById('corrosionCount').textContent = corrosionCount;
-            document.getElementById('otherCount').textContent = otherCount;
+        function updateLocationOptions() {
+            const numSpans = parseInt(document.getElementById('numSpans').value) || 3;
+            const select = document.getElementById('modalLocation');
+            select.innerHTML = '<option value="">-- Select --</option>';
+            select.innerHTML += '<option value="North Abutment">North Abutment</option>';
+            for (let i = 1; i <= numSpans; i++) {
+                select.innerHTML += `<option value="Span ${i}">Span ${i}</option>`;
+                if (i < numSpans) select.innerHTML += `<option value="Pier ${i}">Pier ${i}</option>`;
+            }
+            select.innerHTML += '<option value="South Abutment">South Abutment</option>';
+            select.innerHTML += '<option value="General">General</option>';
         }
 
-        // Update detections list
-        function updateDetectionsList(predictions) {
-            detectionsList.innerHTML = '';
+        function closeModal() {
+            document.getElementById('photoModal').classList.remove('active');
+            state.pendingFrames = null;
+            state.editingPhotoIndex = null;
+        }
 
-            if (predictions.length === 0) {
-                detectionsList.innerHTML = `
-                    <div class="no-detection">
-                        <div class="no-detection-icon">✅</div>
-                        <p>No defects detected in this image.<br>
-                        <small style="color: var(--text-muted);">Try uploading a clearer image or one with visible damage.</small></p>
-                    </div>
-                `;
+        function savePhotoInfo() {
+            const location = document.getElementById('modalLocation').value;
+            const element = document.getElementById('modalElement').value;
+            const description = document.getElementById('modalDescription').value;
+
+            if (!location || !element) {
+                alert('Please select Location and Element');
                 return;
             }
 
-            predictions.forEach((pred, index) => {
-                const defectType = pred.class.toLowerCase();
-                const confidence = pred.confidence * 100;
-                let confidenceClass = 'confidence-low';
-                if (confidence >= 70) confidenceClass = 'confidence-high';
-                else if (confidence >= 40) confidenceClass = 'confidence-medium';
+            if (state.editingPhotoIndex !== null) {
+                // Editing existing photo
+                const photo = state.photos[state.editingPhotoIndex];
+                photo.location = location;
+                photo.element = element;
+                photo.description = description;
+                state.editingPhotoIndex = null;
+            } else if (state.pendingFrames) {
+                // Adding new frames as photos
+                state.pendingFrames.forEach(frame => {
+                    const photoId = `P${String(state.photos.length + 1).padStart(3, '0')}`;
+                    
+                    const photo = {
+                        id: photoId,
+                        data: frame.data,
+                        time: frame.time,
+                        location: location,
+                        element: element,
+                        description: description,
+                        predictions: frame.predictions || [],
+                        defectCount: frame.defectCount || 0
+                    };
+                    
+                    state.photos.push(photo);
 
-                const iconMap = {
-                    'crack': '⚡',
-                    'corrosion': '🔶',
-                    'spalling': '💥',
-                    'leakage': '💧'
+                    // Create defect entries
+                    if (frame.predictions) {
+                        frame.predictions.forEach(pred => {
+                            state.defects.push({
+                                id: state.defects.length + 1,
+                                location: `${location} / ${element}`,
+                                type: pred.class,
+                                severity: 'CS2',
+                                width: '',
+                                length: '',
+                                photoId: photoId,
+                                action: 'Monitor'
+                            });
+                        });
+                    }
+
+                    frame.selected = false;
+                });
+                
+                state.pendingFrames = null;
+            }
+
+            closeModal();
+            renderFrameGrid();
+            renderPhotoGrid();
+            updateCounts();
+        }
+
+        // Photo Upload (direct)
+        async function handlePhotoUpload(files) {
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const frame = {
+                        id: state.frames.length + 1,
+                        time: 0,
+                        data: e.target.result,
+                        selected: true,
+                        hasDefect: false,
+                        defectCount: 0,
+                        predictions: [],
+                        isPhoto: true,
+                        filename: file.name
+                    };
+                    state.frames.push(frame);
+                    document.getElementById('frameCount').textContent = state.frames.length;
+                    renderFrameGrid();
                 };
-                const icon = iconMap[defectType] || '⚠️';
+                reader.readAsDataURL(file);
+            }
+            
+            document.getElementById('toFramesBtn').disabled = false;
+        }
 
-                const item = document.createElement('div');
-                item.className = `detection-item ${defectType}`;
-                item.innerHTML = `
-                    <div class="detection-info">
-                        <div class="detection-icon ${defectType}">${icon}</div>
-                        <div>
-                            <div class="detection-name">${pred.class}</div>
-                            <div class="detection-location">(${Math.round(pred.x)}, ${Math.round(pred.y)})</div>
+        function renderPhotoGrid() {
+            const grid = document.getElementById('photoGrid');
+            const empty = document.getElementById('photoEmpty');
+
+            if (state.photos.length === 0) {
+                grid.innerHTML = '';
+                grid.appendChild(empty);
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            grid.innerHTML = state.photos.map((photo, idx) => `
+                <div class="photo-card">
+                    <img src="${photo.data}" alt="${photo.id}">
+                    <div class="photo-card-info">
+                        <div class="photo-card-header">
+                            <span class="photo-id">${photo.id}</span>
+                            ${photo.defectCount > 0 ? `<span class="defect-badge">${photo.defectCount} defect${photo.defectCount > 1 ? 's' : ''}</span>` : ''}
+                        </div>
+                        <div class="photo-meta">
+                            <div><strong>📍</strong> ${photo.location}</div>
+                            <div><strong>🔧</strong> ${photo.element}</div>
+                            ${photo.description ? `<div>${photo.description}</div>` : ''}
+                        </div>
+                        <div class="photo-card-actions">
+                            <button class="btn-edit" onclick="editPhoto(${idx})">✏️ Edit</button>
+                            <button class="btn-delete" onclick="deletePhoto(${idx})">🗑️</button>
                         </div>
                     </div>
-                    <div class="confidence-badge ${confidenceClass}">
-                        ${confidence.toFixed(1)}%
-                    </div>
-                `;
-                detectionsList.appendChild(item);
+                </div>
+            `).join('');
+        }
+
+        function editPhoto(idx) {
+            const photo = state.photos[idx];
+            document.getElementById('modalPreview').src = photo.data;
+            document.getElementById('modalLocation').value = photo.location;
+            document.getElementById('modalElement').value = photo.element;
+            document.getElementById('modalDescription').value = photo.description || '';
+            state.editingPhotoIndex = idx;
+            updateLocationOptions();
+            document.getElementById('photoModal').classList.add('active');
+        }
+
+        function deletePhoto(idx) {
+            if (!confirm('Delete this photo?')) return;
+            const photoId = state.photos[idx].id;
+            state.defects = state.defects.filter(d => d.photoId !== photoId);
+            state.photos.splice(idx, 1);
+            // Renumber
+            state.photos.forEach((p, i) => p.id = `P${String(i + 1).padStart(3, '0')}`);
+            renderPhotoGrid();
+            updateCounts();
+        }
+
+        // Defects
+        function renderDefects() {
+            const tbody = document.getElementById('defectBody');
+            const table = document.getElementById('defectTable');
+            const empty = document.getElementById('defectEmpty');
+
+            if (state.defects.length === 0) {
+                table.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+
+            table.style.display = 'table';
+            empty.style.display = 'none';
+
+            tbody.innerHTML = state.defects.map((d, idx) => `
+                <tr>
+                    <td>${d.id}</td>
+                    <td><input value="${d.location}" onchange="state.defects[${idx}].location=this.value"></td>
+                    <td>
+                        <select onchange="state.defects[${idx}].type=this.value">
+                            <option ${d.type === 'Crack' ? 'selected' : ''}>Crack</option>
+                            <option ${d.type === 'Spall' ? 'selected' : ''}>Spall</option>
+                            <option ${d.type === 'Corrosion' ? 'selected' : ''}>Corrosion</option>
+                            <option ${d.type === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select onchange="state.defects[${idx}].severity=this.value">
+                            <option ${d.severity === 'CS1' ? 'selected' : ''}>CS1</option>
+                            <option ${d.severity === 'CS2' ? 'selected' : ''}>CS2</option>
+                            <option ${d.severity === 'CS3' ? 'selected' : ''}>CS3</option>
+                            <option ${d.severity === 'CS4' ? 'selected' : ''}>CS4</option>
+                        </select>
+                    </td>
+                    <td><input value="${d.width}" style="width:60px" onchange="state.defects[${idx}].width=this.value"></td>
+                    <td><input value="${d.length}" style="width:60px" onchange="state.defects[${idx}].length=this.value"></td>
+                    <td>${d.photoId}</td>
+                    <td><input value="${d.action}" onchange="state.defects[${idx}].action=this.value"></td>
+                </tr>
+            `).join('');
+        }
+
+        function addDefectRow() {
+            state.defects.push({
+                id: state.defects.length + 1,
+                location: '',
+                type: 'Crack',
+                severity: 'CS2',
+                width: '',
+                length: '',
+                photoId: '',
+                action: ''
+            });
+            renderDefects();
+        }
+
+        // Ratings
+        function initRatingListeners() {
+            document.querySelectorAll('.rating-input').forEach(input => {
+                input.addEventListener('input', updateRatingBadges);
             });
         }
 
-        // Generate Report
-        function generateReport() {
-            const total = document.getElementById('totalDefects').textContent;
-            const cracks = document.getElementById('crackCount').textContent;
-            const corrosion = document.getElementById('corrosionCount').textContent;
-            const other = document.getElementById('otherCount').textContent;
-            
-            let detailsList = '';
-            currentPredictions.forEach((pred, i) => {
-                detailsList += `\n  ${i+1}. ${pred.class} - Confidence: ${(pred.confidence * 100).toFixed(1)}% - Location: (${Math.round(pred.x)}, ${Math.round(pred.y)})`;
+        function updateRatingBadges() {
+            const ids = ['deck', 'super', 'sub', 'culvert', 'bearing', 'joint', 'channel', 'scour'];
+            ids.forEach(id => {
+                const val = document.getElementById(`${id}Rating`).value.toUpperCase();
+                const badge = document.getElementById(`${id}Badge`);
+                const num = parseInt(val);
+                
+                if (val === 'N') {
+                    badge.textContent = 'N/A';
+                    badge.className = 'rating-badge';
+                } else if (!isNaN(num)) {
+                    if (num >= 7) { badge.textContent = 'Good'; badge.className = 'rating-badge rating-good'; }
+                    else if (num >= 5) { badge.textContent = 'Fair'; badge.className = 'rating-badge rating-fair'; }
+                    else { badge.textContent = 'Poor'; badge.className = 'rating-badge rating-poor'; }
+                }
             });
 
-            const report = `
-════════════════════════════════════════════════════════════
-           SKS BRIDGE INSPECTION REPORT
-════════════════════════════════════════════════════════════
+            const main = ['deck', 'super', 'sub'].map(id => {
+                const v = document.getElementById(`${id}Rating`).value;
+                return v.toUpperCase() !== 'N' ? parseInt(v) : null;
+            }).filter(v => v !== null && !isNaN(v));
 
-Generated: ${new Date().toLocaleString()}
+            const overall = document.getElementById('overallCondition');
+            if (main.length > 0) {
+                const min = Math.min(...main);
+                if (min >= 7) { overall.textContent = 'GOOD'; overall.className = 'rating-badge rating-good'; }
+                else if (min >= 5) { overall.textContent = 'FAIR'; overall.className = 'rating-badge rating-fair'; }
+                else { overall.textContent = 'POOR'; overall.className = 'rating-badge rating-poor'; }
+            }
+        }
 
-────────────────────────────────────────────────────────────
-                    SUMMARY
-────────────────────────────────────────────────────────────
+        // Counts
+        function updateCounts() {
+            document.getElementById('frameCount').textContent = state.frames.length;
+            document.getElementById('photoCount').textContent = state.photos.length;
+            document.getElementById('defectCount').textContent = state.defects.length;
+        }
 
-Total Defects Detected: ${total}
+        // Report
+        function updateReportSummary() {
+            document.getElementById('reportBridgeId').textContent = document.getElementById('bridgeNumber').value || '-';
+            document.getElementById('reportDate').textContent = document.getElementById('inspectionDate').value || '-';
+            document.getElementById('reportFrames').textContent = state.frames.length;
+            document.getElementById('reportPhotos').textContent = state.photos.length;
+            document.getElementById('reportDefects').textContent = state.defects.length;
+            document.getElementById('reportCondition').textContent = document.getElementById('overallCondition').textContent;
+        }
 
-  • Cracks:     ${cracks}
-  • Corrosion:  ${corrosion}
-  • Other:      ${other}
+        async function generateExcel() {
+            const workbook = new ExcelJS.Workbook();
 
-────────────────────────────────────────────────────────────
-                 DEFECT DETAILS
-────────────────────────────────────────────────────────────
-${detailsList || '\n  No defects detected'}
+            // Bridge Info
+            const ws1 = workbook.addWorksheet('Bridge Info');
+            ws1.columns = [
+                { header: 'Field', key: 'field', width: 20 },
+                { header: 'Value', key: 'value', width: 40 }
+            ];
+            ws1.addRows([
+                { field: 'Bridge Number', value: document.getElementById('bridgeNumber').value },
+                { field: 'Bridge Name', value: document.getElementById('bridgeName').value },
+                { field: 'State', value: document.getElementById('stateCode').selectedOptions[0].text },
+                { field: 'County', value: document.getElementById('countyCode').value },
+                { field: 'Coordinates', value: `${document.getElementById('latitude').value}, ${document.getElementById('longitude').value}` },
+                { field: 'Inspection Date', value: document.getElementById('inspectionDate').value },
+                { field: 'Inspector', value: document.getElementById('inspectorName').value },
+            ]);
+            styleHeader(ws1);
 
-────────────────────────────────────────────────────────────
-               RECOMMENDATIONS
-────────────────────────────────────────────────────────────
+            // Ratings
+            const ws2 = workbook.addWorksheet('Ratings');
+            ws2.columns = [
+                { header: 'Component', key: 'comp', width: 20 },
+                { header: 'Rating', key: 'rating', width: 10 },
+                { header: 'Condition', key: 'cond', width: 15 }
+            ];
+            const getCondition = v => {
+                if (v.toUpperCase() === 'N') return 'N/A';
+                const n = parseInt(v);
+                if (n >= 7) return 'Good';
+                if (n >= 5) return 'Fair';
+                return 'Poor';
+            };
+            ['deck', 'super', 'sub', 'culvert', 'bearing', 'joint', 'channel', 'scour'].forEach(id => {
+                const val = document.getElementById(`${id}Rating`).value;
+                ws2.addRow({ comp: id.charAt(0).toUpperCase() + id.slice(1), rating: val, cond: getCondition(val) });
+            });
+            ws2.addRow({ comp: 'OVERALL', rating: '', cond: document.getElementById('overallCondition').textContent });
+            styleHeader(ws2);
 
-${parseInt(total) > 0 ? 
-`• Further detailed inspection recommended
-• Consider structural assessment by licensed S.E.
-• Document defect progression over time
-• Priority: ${parseInt(total) > 5 ? 'HIGH' : parseInt(total) > 2 ? 'MEDIUM' : 'LOW'}` : 
-`• No immediate concerns detected
-• Continue regular monitoring schedule`}
+            // Photo Log
+            const ws3 = workbook.addWorksheet('Photo Log');
+            ws3.columns = [
+                { header: 'Photo ID', key: 'id', width: 10 },
+                { header: 'Location', key: 'loc', width: 18 },
+                { header: 'Element', key: 'elem', width: 15 },
+                { header: 'Description', key: 'desc', width: 30 },
+                { header: 'Defects', key: 'def', width: 10 }
+            ];
+            state.photos.forEach(p => {
+                ws3.addRow({ id: p.id, loc: p.location, elem: p.element, desc: p.description, def: p.defectCount });
+            });
+            styleHeader(ws3);
 
-────────────────────────────────────────────────────────────
-                  DISCLAIMER
-────────────────────────────────────────────────────────────
+            // Defect Log
+            const ws4 = workbook.addWorksheet('Defect Log');
+            ws4.columns = [
+                { header: '#', key: 'id', width: 5 },
+                { header: 'Location', key: 'loc', width: 25 },
+                { header: 'Type', key: 'type', width: 12 },
+                { header: 'Severity', key: 'sev', width: 10 },
+                { header: 'Width', key: 'w', width: 10 },
+                { header: 'Length', key: 'l', width: 10 },
+                { header: 'Photo', key: 'photo', width: 10 },
+                { header: 'Action', key: 'action', width: 25 }
+            ];
+            state.defects.forEach(d => {
+                ws4.addRow({ id: d.id, loc: d.location, type: d.type, sev: d.severity, w: d.width, l: d.length, photo: d.photoId, action: d.action });
+            });
+            styleHeader(ws4);
 
-This AI-assisted inspection is for preliminary screening only.
-Final assessment must be performed by a licensed 
-Structural Engineer (S.E.).
-
-════════════════════════════════════════════════════════════
-        Report by SKS Bridge Inspection AI
-            Powered by Roboflow CV
-════════════════════════════════════════════════════════════
-`;
-
-            const blob = new Blob([report], { type: 'text/plain' });
+            // Download
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `SKS-Bridge-Report-${new Date().toISOString().slice(0,10)}.txt`;
+            a.download = `SNBI_Report_${document.getElementById('bridgeNumber').value || 'Bridge'}_${new Date().toISOString().slice(0,10)}.xlsx`;
             a.click();
-            URL.revokeObjectURL(url);
         }
 
-        // Reset
-        function resetInspection() {
-            resultsSection.classList.remove('active');
-            fileInput.value = '';
-            originalImage.src = '';
-            currentPredictions = [];
-            const ctx = resultCanvas.getContext('2d');
-            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        function styleHeader(ws) {
+            ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+            ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F5496' } };
         }
 
-        // Loading overlay
-        function showLoading(show) {
-            loadingOverlay.classList.toggle('active', show);
+        function resetAll() {
+            if (!confirm('Clear all data?')) return;
+            state.frames = [];
+            state.photos = [];
+            state.defects = [];
+            document.getElementById('videoProcessor').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+            document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
+            document.getElementById('inspectionDate').valueAsDate = new Date();
+            document.getElementById('numSpans').value = 3;
+            renderFrameGrid();
+            renderPhotoGrid();
+            updateCounts();
+            nextTab('info');
+        }
+
+        function showLoading(show, text = 'Processing...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
         }
     </script>
 </body>
