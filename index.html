@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKS Bridge Inspection AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #2a2a3a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-glow {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header-badge {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Main Content */
+        main {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            margin-top: 2rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-card);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(6, 182, 212, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone:hover::before {
+            opacity: 1;
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .upload-zone h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--text-muted);
+        }
+
+        .upload-zone input {
+            display: none;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            margin-top: 3rem;
+        }
+
+        .results-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .result-card h3 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+        }
+
+        .image-container canvas {
+            max-width: 100%;
+            max-height: 500px;
+        }
+
+        /* Detection Results */
+        .detections-list {
+            margin-top: 1rem;
+        }
+
+        .detection-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .detection-item.crack { border-left-color: var(--accent-red); }
+        .detection-item.corrosion { border-left-color: var(--accent-orange); }
+        .detection-item.spalling { border-left-color: var(--accent-yellow); }
+        .detection-item.leakage { border-left-color: var(--accent-blue); }
+
+        .detection-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .detection-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .detection-icon.crack { background: rgba(239, 68, 68, 0.2); }
+        .detection-icon.corrosion { background: rgba(249, 115, 22, 0.2); }
+        .detection-icon.spalling { background: rgba(234, 179, 8, 0.2); }
+        .detection-icon.leakage { background: rgba(59, 130, 246, 0.2); }
+
+        .detection-name {
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .detection-location {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .confidence-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .confidence-high { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .confidence-medium { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+        .confidence-low { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+        /* Summary Card */
+        .summary-card {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-header h3 {
+            font-size: 1.25rem;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .summary-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-box {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-blue);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Loading State */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 1.5rem;
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+        }
+
+        /* No Detection State */
+        .no-detection {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .no-detection-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🌉</div>
+                <div class="logo-text">
+                    <h1>SKS Bridge Inspection</h1>
+                    <span>AI-Powered Structural Analysis</span>
+                </div>
+            </div>
+            <div class="header-badge">Beta v1.0</div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h2>AI-Powered Bridge Defect Detection</h2>
+            <p>Upload bridge images to automatically detect cracks, corrosion, spalling, and other structural defects using advanced computer vision.</p>
+        </section>
+
+        <section class="upload-section">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📷</div>
+                <h3>Drop your image here</h3>
+                <p>or click to browse • Supports JPG, PNG, WEBP</p>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection">
+            <div class="results-grid">
+                <div class="result-card">
+                    <h3>📸 Original Image</h3>
+                    <div class="image-container">
+                        <img id="originalImage" src="" alt="Original">
+                    </div>
+                </div>
+                <div class="result-card">
+                    <h3>🔍 Detection Results</h3>
+                    <div class="image-container">
+                        <canvas id="resultCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-header">
+                    <h3>📊 Inspection Summary</h3>
+                </div>
+                <div class="summary-stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalDefects">0</div>
+                        <div class="stat-label">Total Defects</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="crackCount">0</div>
+                        <div class="stat-label">Cracks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="corrosionCount">0</div>
+                        <div class="stat-label">Corrosion</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="otherCount">0</div>
+                        <div class="stat-label">Other</div>
+                    </div>
+                </div>
+
+                <div class="detections-list" id="detectionsList">
+                    <!-- Detection items will be added here -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        📄 Generate Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetInspection()">
+                        🔄 New Inspection
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Analyzing image with AI...</div>
+    </div>
+
+    <footer>
+        <p>SKS Bridge Inspection AI • Powered by Roboflow • Built for Structural Engineers</p>
+    </footer>
+
+    <script>
+        // Roboflow API Configuration
+        const ROBOFLOW_API_KEY = 'rf_uTnziOwBlAfvm5O4yl0tzFNbg632';
+        const MODEL_ENDPOINT = 'https://detect.roboflow.com/crack-bridge-detection/1';
+        
+        // DOM Elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const resultsSection = document.getElementById('resultsSection');
+        const originalImage = document.getElementById('originalImage');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const detectionsList = document.getElementById('detectionsList');
+
+        // Color mapping for different defect types
+        const defectColors = {
+            'crack': '#ef4444',
+            'Crack': '#ef4444',
+            'corrosion': '#f97316',
+            'Corrosion': '#f97316',
+            'spalling': '#eab308',
+            'Spalling': '#eab308',
+            'leakage': '#3b82f6',
+            'Leakage': '#3b82f6',
+            'freelime': '#a855f7',
+            'Freelime': '#a855f7',
+            'default': '#06b6d4'
+        };
+
+        // Event Listeners
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImage(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                processImage(file);
+            }
+        });
+
+        // Process uploaded image
+        async function processImage(file) {
+            showLoading(true);
+            
+            // Display original image
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Image = e.target.result;
+                originalImage.src = base64Image;
+                
+                // Send to Roboflow API
+                try {
+                    const predictions = await detectDefects(base64Image);
+                    displayResults(base64Image, predictions);
+                } catch (error) {
+                    console.error('Detection error:', error);
+                    alert('Error analyzing image. Please try again.');
+                }
+                
+                showLoading(false);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Call Roboflow API
+        async function detectDefects(base64Image) {
+            // Remove data URL prefix
+            const imageData = base64Image.split(',')[1];
+            
+            const response = await fetch(`${MODEL_ENDPOINT}?api_key=${ROBOFLOW_API_KEY}&confidence=10`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: imageData
+            });
+
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
+
+            return await response.json();
+        }
+
+        // Display detection results
+        function displayResults(imageSrc, data) {
+            resultsSection.classList.add('active');
+            
+            const img = new Image();
+            img.onload = () => {
+                // Setup canvas
+                const ctx = resultCanvas.getContext('2d');
+                resultCanvas.width = img.width;
+                resultCanvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                const predictions = data.predictions || [];
+                
+                // Draw bounding boxes
+                predictions.forEach(pred => {
+                    const color = defectColors[pred.class] || defectColors.default;
+                    
+                    // Draw box
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(
+                        pred.x - pred.width / 2,
+                        pred.y - pred.height / 2,
+                        pred.width,
+                        pred.height
+                    );
+
+                    // Draw label background
+                    const label = `${pred.class} ${Math.round(pred.confidence * 100)}%`;
+                    ctx.font = 'bold 16px Outfit';
+                    const textWidth = ctx.measureText(label).width;
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(
+                        pred.x - pred.width / 2,
+                        pred.y - pred.height / 2 - 25,
+                        textWidth + 10,
+                        25
+                    );
+
+                    // Draw label text
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(
+                        label,
+                        pred.x - pred.width / 2 + 5,
+                        pred.y - pred.height / 2 - 7
+                    );
+                });
+
+                // Update statistics
+                updateStatistics(predictions);
+                
+                // Update detections list
+                updateDetectionsList(predictions);
+            };
+            img.src = imageSrc;
+        }
+
+        // Update statistics
+        function updateStatistics(predictions) {
+            const crackCount = predictions.filter(p => 
+                p.class.toLowerCase().includes('crack')).length;
+            const corrosionCount = predictions.filter(p => 
+                p.class.toLowerCase().includes('corrosion') || 
+                p.class.toLowerCase().includes('rust')).length;
+            const otherCount = predictions.length - crackCount - corrosionCount;
+
+            document.getElementById('totalDefects').textContent = predictions.length;
+            document.getElementById('crackCount').textContent = crackCount;
+            document.getElementById('corrosionCount').textContent = corrosionCount;
+            document.getElementById('otherCount').textContent = otherCount;
+        }
+
+        // Update detections list
+        function updateDetectionsList(predictions) {
+            detectionsList.innerHTML = '';
+
+            if (predictions.length === 0) {
+                detectionsList.innerHTML = `
+                    <div class="no-detection">
+                        <div class="no-detection-icon">✅</div>
+                        <p>No defects detected in this image</p>
+                    </div>
+                `;
+                return;
+            }
+
+            predictions.forEach((pred, index) => {
+                const defectType = pred.class.toLowerCase();
+                const confidence = pred.confidence * 100;
+                let confidenceClass = 'confidence-low';
+                if (confidence >= 70) confidenceClass = 'confidence-high';
+                else if (confidence >= 40) confidenceClass = 'confidence-medium';
+
+                const iconMap = {
+                    'crack': '⚡',
+                    'corrosion': '🔶',
+                    'spalling': '💥',
+                    'leakage': '💧',
+                    'freelime': '⚪'
+                };
+                const icon = iconMap[defectType] || '⚠️';
+
+                const item = document.createElement('div');
+                item.className = `detection-item ${defectType}`;
+                item.innerHTML = `
+                    <div class="detection-info">
+                        <div class="detection-icon ${defectType}">${icon}</div>
+                        <div>
+                            <div class="detection-name">${pred.class}</div>
+                            <div class="detection-location">Position: (${Math.round(pred.x)}, ${Math.round(pred.y)})</div>
+                        </div>
+                    </div>
+                    <div class="confidence-badge ${confidenceClass}">
+                        ${confidence.toFixed(1)}%
+                    </div>
+                `;
+                detectionsList.appendChild(item);
+            });
+        }
+
+        // Generate PDF Report
+        function generateReport() {
+            const totalDefects = document.getElementById('totalDefects').textContent;
+            const crackCount = document.getElementById('crackCount').textContent;
+            const corrosionCount = document.getElementById('corrosionCount').textContent;
+            const otherCount = document.getElementById('otherCount').textContent;
+            
+            const reportContent = `
+SKS BRIDGE INSPECTION REPORT
+============================
+Generated: ${new Date().toLocaleString()}
+
+INSPECTION SUMMARY
+------------------
+Total Defects Detected: ${totalDefects}
+- Cracks: ${crackCount}
+- Corrosion: ${corrosionCount}
+- Other Defects: ${otherCount}
+
+RECOMMENDATIONS
+---------------
+${parseInt(totalDefects) > 0 ? 
+'• Further detailed inspection recommended\n• Consider structural assessment by licensed S.E.\n• Document defect progression over time' : 
+'• No immediate concerns detected\n• Continue regular monitoring schedule'}
+
+DISCLAIMER
+----------
+This AI-assisted inspection is for preliminary screening only.
+Final assessment must be performed by a licensed Structural Engineer.
+
+Report generated by SKS Bridge Inspection AI
+Powered by Roboflow Computer Vision
+            `;
+
+            // Create download
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bridge-inspection-report-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Reset inspection
+        function resetInspection() {
+            resultsSection.classList.remove('active');
+            fileInput.value = '';
+            originalImage.src = '';
+            const ctx = resultCanvas.getContext('2d');
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        }
+
+        // Show/hide loading overlay
+        function showLoading(show) {
+            loadingOverlay.classList.toggle('active', show);
+        }
+    </script>
+</body>
+</html>
